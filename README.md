@@ -7,7 +7,7 @@ A CLI tool to allow interaction with STDIN.
 `go install github.com/cyingfan/trap@latest`
 
 ## Usage Examples
-[Demo](trap.gif)
+![Demo](trap.gif)
 
 ```
 # Run jq against json API
