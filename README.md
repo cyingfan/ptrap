@@ -10,7 +10,7 @@ A CLI tool to allow interaction with STDIN.
 curl <API-endpoint> | ./trap jq
 
 # Run ripgrep against huge file
-cat <file> | ./trap rg
+cat <file> | ./trap rg --color=always
 ```
 
 

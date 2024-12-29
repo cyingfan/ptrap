@@ -1,4 +1,4 @@
-module trap
+module github.com/cyingfan/trap
 
 go 1.23.4
 

@@ -44,7 +44,6 @@ func newModel(initialValue string) (m model) {
 	i := textinput.New()
 	i.Prompt = ""
 	i.Cursor.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("63"))
-	// i.Width = 48
 	i.SetValue("")
 	i.CursorEnd()
 	i.Focus()
@@ -77,28 +76,34 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		footerHeight := lipgloss.Height(m.footerView())
 		if !m.ready {
 			m.viewport = viewport.New(msg.Width, msg.Height-footerHeight)
-			m.viewport.YPosition = 0
 			m.ready = true
 		} else {
 			m.viewport.Width = msg.Width
 			m.viewport.Height = msg.Height - footerHeight
 		}
 
+	case RunnerUpdated:
+		msg := msg.(RunnerUpdated)
+		m.viewport.SetContent(msg.output)
 	}
 
 	m.userInput, cmd = m.userInput.Update(msg)
 	cmds = append(cmds, cmd)
 
 	m.viewport, cmd = m.viewport.Update(msg)
-	m.viewport.SetContent(m.runner.Run(m.userInput.Value()))
 	cmds = append(cmds, cmd)
+
+	cmd = m.runner.Update(m.userInput.Value())
+	if cmd != nil {
+		cmds = append(cmds, cmd)
+	}
 
 	return m, tea.Batch(cmds...)
 }
 
 func (m model) View() string {
 	if !m.ready {
-		return "\n  Initializing...\n"
+		return "Initializing...\n"
 	}
 	return fmt.Sprintf(
 		"%s\n%s",
@@ -116,6 +121,10 @@ func (m model) footerView() string {
 		lipgloss.JoinHorizontal(lipgloss.Center, line, info),
 		prompt,
 	)
+}
+
+type RunnerUpdated struct {
+	output string
 }
 
 type commandrunner struct {
@@ -140,15 +149,20 @@ func NewRunner(input string) (c commandrunner) {
 	}
 
 	c.arg = " "
-	return c
+	return
 }
 
-func (c commandrunner) Run(arg string) string {
+func (c commandrunner) Update(arg string) tea.Cmd {
 	if arg != c.arg {
-		c.arg = arg
-		c.output = c.exec()
+		return func() tea.Msg {
+			c.arg = arg
+			c.output = c.exec()
+			return RunnerUpdated{output: c.output}
+		}
 	}
-	return c.output
+	return func() tea.Msg {
+		return nil
+	}
 }
 
 func (c commandrunner) exec() string {
@@ -189,7 +203,7 @@ func main() {
 
 	model := newModel(strings.TrimSpace(b.String()))
 
-	p := tea.NewProgram(model, tea.WithAltScreen())
+	p := tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseCellMotion())
 	if _, err := p.Run(); err != nil {
 		fmt.Println("Couldn't start program:", err)
 		os.Exit(1)
