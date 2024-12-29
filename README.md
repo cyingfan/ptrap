@@ -3,6 +3,9 @@
 A CLI tool to allow interaction with STDIN.
 
 
+## Installation
+`go install github.com/cyingfan/trap@latest`
+
 ## Usage Examples
 
 ```
