@@ -16,4 +16,4 @@ cat <file> | ./trap rg --color=always
 
 ## TODO
 - [ ] App does not terminate immediately
-- [ ] Clipboard support
+- [X] Clipboard support

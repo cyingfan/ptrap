@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -68,7 +69,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch key.Type {
 			case tea.KeyCtrlC, tea.KeyEscape:
 				return m, tea.Quit
+
+			case tea.KeyEnter:
+				clipboard.WriteAll(m.runner.output)
 			}
+
 		}
 
 	case tea.WindowSizeMsg:
@@ -84,7 +89,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case RunnerUpdated:
 		msg := msg.(RunnerUpdated)
-		m.viewport.SetContent(msg.output)
+		m.runner = msg.runner
+		m.viewport.SetContent(msg.runner.output)
 	}
 
 	m.userInput, cmd = m.userInput.Update(msg)
@@ -114,17 +120,20 @@ func (m model) View() string {
 
 func (m model) footerView() string {
 	info := infoStyle.Render(fmt.Sprintf("%3.f%%", m.viewport.ScrollPercent()*100))
-	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(info)))
+	keyHelp := infoStyle.Render("[Esc] Quit  [Ctrl+C] Quit  [Enter] Copy to clipboard")
+	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(info)-lipgloss.Width(keyHelp)))
+
 	prompt := fmt.Sprintf("Command: %s %s ", m.runner.command, m.userInput.View())
+
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
-		lipgloss.JoinHorizontal(lipgloss.Center, line, info),
-		prompt,
+		lipgloss.JoinHorizontal(lipgloss.Center, keyHelp, line, info),
+		lipgloss.JoinHorizontal(lipgloss.Center, prompt),
 	)
 }
 
 type RunnerUpdated struct {
-	output string
+	runner commandrunner
 }
 
 type commandrunner struct {
@@ -157,7 +166,7 @@ func (c commandrunner) Update(arg string) tea.Cmd {
 		return func() tea.Msg {
 			c.arg = arg
 			c.output = c.exec()
-			return RunnerUpdated{output: c.output}
+			return RunnerUpdated{runner: c}
 		}
 	}
 	return func() tea.Msg {
