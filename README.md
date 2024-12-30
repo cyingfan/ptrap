@@ -1,20 +1,20 @@
-# trap
+# ptrap
 
-A CLI tool to allow interaction with STDIN.
+A CLI tool to allow interaction with STDOUT from another app.
 
 
 ## Installation
-`go install github.com/cyingfan/trap@latest`
+`go install github.com/cyingfan/ptrap@latest`
 
 ## Usage Examples
-![Demo](trap.gif)
+![Demo](ptrap.gif)
 
 ```
 # Run jq against json API
-curl <API-endpoint> | ./trap jq
+curl <API-endpoint> | ptrap jq
 
 # Run ripgrep against huge file
-cat <file> | ./trap rg --color=always
+cat <file> | ptrap rg --color=always
 ```
 
 

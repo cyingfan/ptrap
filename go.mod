@@ -1,4 +1,4 @@
-module github.com/cyingfan/trap
+module github.com/cyingfan/ptrap
 
 go 1.23.4
 
