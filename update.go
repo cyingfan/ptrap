@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -35,8 +35,10 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	)
 
 	switch msg := msg.(type) {
-	case heartbeatMsg:
-		cmds = append(cmds, heartbeatCmd())
+ case heartbeatMsg:
+		if !m.quitting {
+			cmds = append(cmds, heartbeatCmd())
+		}
 	case tea.KeyMsg:
 		key := msg
 		// If modal is open, route keys to modal
@@ -82,11 +84,17 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		switch key.Type {
-		case tea.KeyCtrlC:
+	case tea.KeyCtrlC:
 			if m.cancel != nil {
 				m.cancel()
 			}
-			return m, func() tea.Msg { fmt.Print("\r\n"); os.Exit(0); return nil }
+			m.quitting = true
+			// On Windows, exit immediately for reliable termination; on others, graceful quit
+			if runtime.GOOS == "windows" {
+				os.Exit(0)
+				return m, nil
+			}
+			return m, tea.Quit
 		case tea.KeyCtrlY:
 			m.copyPipelineStringToClipboard()
 		case tea.KeyCtrlU:
@@ -170,10 +178,12 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		val := n.inputModel.Value()
 		if val != m.nodes[m.focusIdx].arg {
 			m.nodes[m.focusIdx].arg = val
-			// debounce rerun: schedule after short delay
-			m.runSeq++
-			seq := m.runSeq
-			cmds = append(cmds, tea.Tick(150*time.Millisecond, func(time.Time) tea.Msg { return rerunPipelineMsg{id: seq} }))
+			if !m.quitting {
+				// debounce rerun: schedule after short delay
+				m.runSeq++
+				seq := m.runSeq
+				cmds = append(cmds, tea.Tick(150*time.Millisecond, func(time.Time) tea.Msg { return rerunPipelineMsg{id: seq} }))
+			}
 		}
 	}
 

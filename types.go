@@ -28,7 +28,8 @@ type model struct {
 	showModal  bool
 	modalInput textinput.Model
 	// debounce sequence id for rerunning pipeline
-	runSeq int
+	runSeq   int
+	quitting bool
 }
 
 func newModel(initialValue string) (m model) {
