@@ -19,9 +19,9 @@ A CLI tool to allow interaction with STDOUT from another app.
 ![Demo](ptrap.gif)
 
 Keyboard shortcuts:
-- Enter: copy current output to clipboard
+- Ctrl+U: copy current output to clipboard
 - Ctrl+Y: copy the pipeline string to clipboard (e.g., `jq . | rg foo`)
-- | (pipe): open the "Add command" modal
+- Ctrl+N: open the "Add command" modal
 - Ctrl+[ : focus previous stage
 - Ctrl+] : focus next stage
 - Ctrl+D: delete current stage

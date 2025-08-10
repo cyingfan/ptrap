@@ -89,7 +89,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, func() tea.Msg { fmt.Print("\r\n"); os.Exit(0); return nil }
 		case tea.KeyCtrlY:
 			m.copyPipelineStringToClipboard()
-		case tea.KeyEnter:
+		case tea.KeyCtrlU:
 			clipboard.WriteAll(m.output)
 		case tea.KeyCtrlD:
 			if len(m.nodes) > 0 {
@@ -112,8 +112,8 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		default:
-			// open modal on '|' only
-			if key.String() == "|" {
+			// open modal on Ctrl+N
+			if key.Type == tea.KeyCtrlN || key.String() == "ctrl+n" {
 				m.showModal = true
 				m.modalInput.SetValue("")
 				m.modalInput.CursorEnd()

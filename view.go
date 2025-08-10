@@ -20,7 +20,7 @@ func (m model) View() string {
 
 func (m model) footerView() string {
 	info := infoStyle.Render(fmt.Sprintf("%3.f%%", m.viewport.ScrollPercent()*100))
-	keyHelp := infoStyle.Render("[Ctrl+C] Quit  [Enter] Copy output  [Ctrl+Y] Copy pipeline  [|] Add  [Ctrl+[ Prev]  [Ctrl+] Next  [Ctrl+D] Del")
+	keyHelp := infoStyle.Render("[Ctrl+C] Quit  [Ctrl+U] Copy output  [Ctrl+Y] Copy pipeline  [Ctrl+N] Add  [Ctrl+[] Prev  [Ctrl+]] Next  [Ctrl+D] Del")
 	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(info)-lipgloss.Width(keyHelp)))
 
 	// Build pipeline prompt
@@ -39,7 +39,7 @@ func (m model) footerView() string {
 	}
 	prompt := "Command: "
 	if len(segments) == 0 {
-		prompt += "(press | to add a command)"
+		prompt += "(press Ctrl+N to add a command)"
 	} else {
 		prompt += strings.Join(segments, " | ")
 	}
