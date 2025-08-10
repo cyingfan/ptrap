@@ -6,9 +6,11 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -44,6 +46,30 @@ func runShellCommand(cmdStr string) (string, error) {
 	}
 	out, err := cmd.Output() // stdout only
 	return string(out), err
+}
+
+// resetTTY attempts to restore the terminal to a sane state on Unix-like systems.
+// It runs `stty sane` against /dev/tty and also ensures the cursor is visible and
+// the alternate screen is exited, writing directly to the controlling TTY.
+func resetTTY() {
+	if runtime.GOOS == "windows" {
+		return
+	}
+	// Best-effort: restore terminal modes via stty sane on the controlling TTY
+	if ttyIn, err := os.OpenFile("/dev/tty", os.O_RDONLY, 0); err == nil {
+		cmd := exec.Command("stty", "sane")
+		cmd.Stdin = ttyIn
+		_ = cmd.Run()
+		_ = ttyIn.Close()
+	}
+	// Also ensure cursor is shown and alt screen is left by writing to /dev/tty
+	if ttyOut, err := os.OpenFile("/dev/tty", os.O_WRONLY, 0); err == nil {
+		_, _ = ttyOut.WriteString("\x1b[?25h\x1b[?1049l")
+		_ = ttyOut.Close()
+	} else {
+		// As a last resort, write to stdout (may be redirected)
+		fmt.Print("\x1b[?25h\x1b[?1049l")
+	}
 }
 
 func main() {
@@ -111,8 +137,50 @@ func main() {
 
 	model := newModel(strings.TrimSpace(inputData))
 
-	p := tea.NewProgram(&model, tea.WithAltScreen())
+	// Ensure we attempt to restore terminal on Unix on any exit path
+	if runtime.GOOS != "windows" {
+		defer resetTTY()
+		// As a last-resort guard, also trap common termination signals and
+		// restore the TTY before exiting in case Bubble Tea can't.
+		sigc := make(chan os.Signal, 1)
+		signal.Notify(sigc, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
+		go func() {
+			<-sigc
+			resetTTY()
+			os.Exit(130)
+		}()
+	}
+
+	var p *tea.Program
+	if runtime.GOOS != "windows" {
+		// Bind both input and output to the controlling TTY so Bubble Tea can
+		// properly manage and restore terminal state even when stdin/stdout are redirected.
+		ttyIn, inErr := os.OpenFile("/dev/tty", os.O_RDONLY, 0)
+		if inErr == nil {
+			// We’ll try to open tty for output too; if it fails, fall back to default output
+			ttyOut, outErr := os.OpenFile("/dev/tty", os.O_WRONLY, 0)
+			if outErr == nil {
+				defer ttyIn.Close()
+				defer ttyOut.Close()
+				p = tea.NewProgram(&model, tea.WithAltScreen(), tea.WithInput(ttyIn), tea.WithOutput(ttyOut))
+			} else {
+				defer ttyIn.Close()
+				p = tea.NewProgram(&model, tea.WithAltScreen(), tea.WithInput(ttyIn))
+			}
+		} else {
+			// Fall back to default behavior
+			p = tea.NewProgram(&model, tea.WithAltScreen())
+		}
+	} else {
+		// Windows: default IO is fine
+		p = tea.NewProgram(&model, tea.WithAltScreen())
+	}
+
 	if _, err := p.Run(); err != nil {
+		if runtime.GOOS != "windows" {
+			// Ensure cursor and screen are restored in case of abrupt termination
+			resetTTY()
+		}
 		fmt.Println("Couldn't start program:", err)
 		os.Exit(1)
 	}
